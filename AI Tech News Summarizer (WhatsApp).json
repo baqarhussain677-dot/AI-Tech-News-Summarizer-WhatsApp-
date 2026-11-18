@@ -1,0 +1,270 @@
+{
+  "name": "AI Tech News Summarizer (WhatsApp)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1296,
+        -16
+      ],
+      "id": "3c2c11aa-f460-4025-938f-cd5c08e9ecd0",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://hn.algolia.com/api/v1/search_by_date?tags=story&hitsPerPage=50",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1072,
+        -16
+      ],
+      "id": "62117c70-b422-4d68-8789-d2bd77c06856",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "hits",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1.1,
+      "position": [
+        -848,
+        -16
+      ],
+      "id": "60218239-70b0-4689-b8ec-a1221e64f50b",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "90f374a6-0776-465d-bbcc-670fe0370f96",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "=AI",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "a6254923-59c6-4918-9482-c4a97211cf8b",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "python ",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "73745853-fd06-43f6-b30f-6d84d8b377e7",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "Cybersecurity",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        -624,
+        -16
+      ],
+      "id": "755a85d8-af55-48f7-8ab2-3a34151db85d",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "modelName": "=models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -176,
+        144
+      ],
+      "id": "5e985b4b-6370-4a55-a7ad-c8f7c8e5eca6",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pD0wg69jXVOHDwbo",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -16
+      ],
+      "id": "38125395-b9f1-40f4-a2a7-42f0d217f7d5",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this tech news article and respond ONLY in valid JSON format with no markdown or extra text:\n\nTitle: {{ $json.title }}\nURL: {{ $json.url }}\n\nReturn exact JSON structure:\n{\n  \"summary\": \"2 short, easy-to-understand sentences explaining why this matters\",\n  \"category\": \"AI / Python / Cybersecurity / Tech\",\n  \"priority\": 8\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -176,
+        -16
+      ],
+      "id": "02a25266-2fbf-41e2-b5d6-7515074a537d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1422692530929934",
+        "recipientPhoneNumber": "enter your number",
+        "textBody": "=🚀 *{{ $('Limit').item.json.title }}*  {{ JSON.parse($json.output.replace(/```json|```/g, '').trim()).summary }}  🏷️ *Category:* {{ JSON.parse($json.output.replace(/```json|```/g, '').trim()).category }} 🔗 *Read more:* {{ $('Limit').item.json.url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        -16
+      ],
+      "id": "3284a218-596e-43dc-85e5-fe093351f7cf",
+      "name": "Send message",
+      "webhookId": "756ddfd3-b142-46e6-80ad-a51e41f83ad5",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "RCFNgzpc9zxdv3RA",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "892483a2-dfb0-491d-977e-dd8bd09a9b82",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9edb02d2dd34e455890dd35a263da0fd5ee0b65e160cd314aa6d67be5982c2d0"
+  },
+  "nodeGroups": [],
+  "id": "A2X8O2u6DKyOBx5q",
+  "tags": []
+}
